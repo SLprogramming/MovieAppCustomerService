@@ -1,5 +1,5 @@
-import CatchAsyncError from "../middleware/catchAsyncError";
-import Message from "../models/message.model";
+import CatchAsyncError from "../middleware/catchAsyncError.js";
+import Message from "../models/message.model.js";
 import mongoose from "mongoose";
 export const getAllMessagesWithConversationId = CatchAsyncError(async (req, res) => {
     try {

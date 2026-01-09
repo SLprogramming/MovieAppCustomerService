@@ -3,8 +3,8 @@ import dotEnv from "dotenv"
 import cookieParser from "cookie-parser"
 import cors from "cors"
 import {ErrorMiddleware} from "./middleware/error.js"
-
-
+import conversationRouter from "./router/conversation.js"
+import messageRouter from "./router/message.js"
 
 dotEnv.config()
 
@@ -19,8 +19,8 @@ app.use(cookieParser())
 
 const allowedOrigins = [
   "https://movie-app-website-mu.vercel.app",
-  "http://192.168.110.108:5173",
-  "http://192.168.110.108:5174"
+  "http://192.168.110.124:5173",
+  "http://192.168.110.124:5174"
 ];
 
 app.use(cors({
@@ -38,8 +38,8 @@ app.use(cors({
 
 
 
-
-
+app.use("/api/conversations",conversationRouter)
+app.use("/api/messages",messageRouter)
 
 
 app.all("*",(req,res,next) => {

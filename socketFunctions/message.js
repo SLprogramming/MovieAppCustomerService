@@ -1,8 +1,10 @@
 import CatchAsyncError from "../middleware/catchAsyncError.js";
 import Message from "../models/message.model.js";
+import UserModel from "../models/user.model.js";
 import Conversation from "../models/conversation.model.js";
 import { getIO } from "../utils/socket.js";
 import ErrorHandler from "../utils/ErrorHandler.js";
+// UserModel;
 export const createMessage = CatchAsyncError(
   async ({ sender_id, message, file, conversation_id  }) => {
     const io = getIO();
@@ -20,6 +22,11 @@ export const createMessage = CatchAsyncError(
         response_user_id: null,
         status: "pending",
       });
+      conversation = await conversation.populate({
+  path: "request_user_id",
+  select: "name avatar role",
+});
+
       io.to("admins").emit("conversation:new", conversation);
       // 🔔 notify admins about new conversation
       // emitToAdmins("new_conversation", conversation);
@@ -54,7 +61,7 @@ export const createMessage = CatchAsyncError(
 
 export const takeConversation = CatchAsyncError(
   async ({ conversation_id, user_id }) => {
-
+ const io = getIO();
     // 1️⃣ Find & take conversation atomically
     const conversation = await Conversation.findOneAndUpdate(
       {
@@ -82,6 +89,7 @@ export const takeConversation = CatchAsyncError(
     // 🔔 socket emit (optional)
     // emitToUser(conversation.request_user_id, "conversation_taken", conversation);
     // emitToAdmins("conversation_removed_from_queue", conversation._id);
+    io.to('admins').emit("newConversation:remove", conversation._id);
 
     return conversation;
   }
