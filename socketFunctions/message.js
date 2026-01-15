@@ -6,7 +6,7 @@ import { getIO } from "../utils/socket.js";
 import ErrorHandler from "../utils/ErrorHandler.js";
 // UserModel;
 export const createMessage = CatchAsyncError(
-  async ({ sender_id, message, file, conversation_id  }) => {
+  async ({ sender_id, message, file, conversation_id }) => {
     const io = getIO();
     let conversation = null;
 
@@ -23,24 +23,28 @@ export const createMessage = CatchAsyncError(
         status: "pending",
       });
       conversation = await conversation.populate({
-  path: "request_user_id",
-  select: "name avatar role",
-});
+        path: "request_user_id",
+        select: "name avatar role",
+      });
 
       io.to("admins").emit("conversation:new", conversation);
+      io.to(`user_${receiverId}`).emit("conversation:new", conversation);
       // 🔔 notify admins about new conversation
       // emitToAdmins("new_conversation", conversation);
     }
 
     // 3️⃣ Save message
-    const newMessage = await Message.create({
+    let newMessage = await Message.create({
       sender_id,
       message,
       conversation_id: conversation._id,
-      file:  null,
+      file: null,
       status: "sent",
     });
-
+    newMessage = await newMessage.populate({
+      path: "sender_id",
+      select: "name avatar role",
+    });
     // 4️⃣ Socket logic
     if (conversation.response_user_id) {
       // normal chat (admin ↔ user)
@@ -51,7 +55,7 @@ export const createMessage = CatchAsyncError(
 
       // emitToUser(receiverId, "new_message", newMessage);
       io.to(`user_${receiverId}`).emit("message:new", newMessage);
-    } 
+    }
 
     console.log("Message created:", newMessage);
 
@@ -61,41 +65,39 @@ export const createMessage = CatchAsyncError(
 
 export const takeConversation = CatchAsyncError(
   async ({ conversation_id, user_id }) => {
- const io = getIO();
+    const io = getIO();
     // 1️⃣ Find & take conversation atomically
     const conversation = await Conversation.findOneAndUpdate(
       {
         _id: conversation_id,
-        status: "pending",              // only pending can be taken
+        status: "pending", // only pending can be taken
         response_user_id: null,
       },
       {
         $set: {
-          response_user_id: user_id,    // admin id
+          response_user_id: user_id, // admin id
           status: "progress",
         },
       },
       {
-        new: true,                      // return updated document
+        new: true, // return updated document
       }
     );
 
     // 2️⃣ If already taken
     if (!conversation) {
-      throw new Error("Conversation already taken or not found");
+      return;
     }
 
-    
     // 🔔 socket emit (optional)
     // emitToUser(conversation.request_user_id, "conversation_taken", conversation);
     // emitToAdmins("conversation_removed_from_queue", conversation._id);
-    io.to('admins').emit("newConversation:remove", conversation._id);
+    io.to("admins").emit("newConversation:remove", conversation._id);
 
     return conversation;
   }
 );
 
-
 export const changeMessageStatus = CatchAsyncError(async (payload) => {
-    console.log("Changing message status with payload:", payload);
+  console.log("Changing message status with payload:", payload);
 });
