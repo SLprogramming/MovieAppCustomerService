@@ -13,6 +13,10 @@ const messageSchema = new mongoose.Schema(
     //   ref: "User",
     //   required: true,
     // },
+    client_id:{
+      type: String,
+      required: true,
+    },
     conversation_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Conversation",
@@ -20,7 +24,7 @@ const messageSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["sending", "sent", "seen"],
+      enum: ["sending", "sent", "seen"," failed"],
       default: "sending",
       required: true,
     },

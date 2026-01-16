@@ -6,7 +6,7 @@ import { getIO } from "../utils/socket.js";
 import ErrorHandler from "../utils/ErrorHandler.js";
 // UserModel;
 export const createMessage = CatchAsyncError(
-  async ({ sender_id, message, file, conversation_id }) => {
+  async ({ sender_id, message, file, conversation_id,client_id }) => {
     const io = getIO();
     let conversation = null;
 
@@ -28,13 +28,14 @@ export const createMessage = CatchAsyncError(
       });
 
       io.to("admins").emit("conversation:new", conversation);
-      io.to(`user_${receiverId}`).emit("conversation:new", conversation);
+      io.to(`user_${sender_id}`).emit("conversation:new", conversation);
       // 🔔 notify admins about new conversation
       // emitToAdmins("new_conversation", conversation);
     }
 
     // 3️⃣ Save message
     let newMessage = await Message.create({
+      client_id,
       sender_id,
       message,
       conversation_id: conversation._id,
@@ -45,6 +46,7 @@ export const createMessage = CatchAsyncError(
       path: "sender_id",
       select: "name avatar role",
     });
+    io.to(`user_${sender_id}`).emit("message:saved", newMessage);
     // 4️⃣ Socket logic
     if (conversation.response_user_id) {
       // normal chat (admin ↔ user)
