@@ -6,13 +6,16 @@ import { getIO } from "../utils/socket.js";
 import ErrorHandler from "../utils/ErrorHandler.js";
 // UserModel;
 export const createMessage = CatchAsyncError(
-  async ({ sender_id, message, file, conversation_id,client_id }) => {
+  async ({ sender_id, message, file, conversation_id, client_id }) => {
     const io = getIO();
     let conversation = null;
 
     // 1️⃣ Get conversation if provided
     if (conversation_id) {
-      conversation = await Conversation.findById(conversation_id);
+      conversation = await Conversation.findById(conversation_id).populate({
+        path: "request_user_id",
+        select: "name avatar role",
+      });
     }
 
     // 2️⃣ Create conversation if not exists (first message)
@@ -27,10 +30,15 @@ export const createMessage = CatchAsyncError(
         select: "name avatar role",
       });
 
-      io.to("admins").emit("conversation:new", conversation);
-      io.to(`user_${sender_id}`).emit("conversation:new", conversation);
       // 🔔 notify admins about new conversation
       // emitToAdmins("new_conversation", conversation);
+     
+
+    const conversationObj = conversation.toObject();
+    conversationObj.lastMessage = message
+
+    io.to("admins").emit("pendingConversation:new", conversationObj);
+    io.to(`user_${sender_id}`).emit("conversation:new", conversationObj);
     }
 
     // 3️⃣ Save message
@@ -46,23 +54,29 @@ export const createMessage = CatchAsyncError(
       path: "sender_id",
       select: "name avatar role",
     });
+
+  
     io.to(`user_${sender_id}`).emit("message:saved", newMessage);
+    
     // 4️⃣ Socket logic
     if (conversation.response_user_id) {
       // normal chat (admin ↔ user)
       const receiverId =
-        String(conversation.request_user_id) === String(sender_id)
+        String(conversation.request_user_id?._id) === String(sender_id)
           ? conversation.response_user_id
-          : conversation.request_user_id;
+          : conversation.request_user_id?._id;
 
       // emitToUser(receiverId, "new_message", newMessage);
+      console.log(receiverId)
       io.to(`user_${receiverId}`).emit("message:new", newMessage);
+    }else{
+      io.to('admins').emit("message:new",newMessage)
     }
 
-    console.log("Message created:", newMessage);
+    // console.log("Message created:", newMessage);
 
     return newMessage;
-  }
+  },
 );
 
 export const takeConversation = CatchAsyncError(
@@ -83,8 +97,11 @@ export const takeConversation = CatchAsyncError(
       },
       {
         new: true, // return updated document
-      }
-    );
+      },
+    ).populate({
+        path: "request_user_id",
+        select: "name avatar role",
+      });
 
     // 2️⃣ If already taken
     if (!conversation) {
@@ -94,10 +111,19 @@ export const takeConversation = CatchAsyncError(
     // 🔔 socket emit (optional)
     // emitToUser(conversation.request_user_id, "conversation_taken", conversation);
     // emitToAdmins("conversation_removed_from_queue", conversation._id);
+    const lastMessage = await Message.findOne({
+      conversation_id: conversation._id,
+    })
+      .sort({ createdAt: -1 })
+      .select("message") // Only select the content field
+      .lean();
+    const conversationObj = conversation.toObject();
+    conversationObj.lastMessage = lastMessage?.message || null;
     io.to("admins").emit("newConversation:remove", conversation._id);
+    io.to(`user_${user_id}`).emit("conversation:new", conversationObj);
 
     return conversation;
-  }
+  },
 );
 
 export const changeMessageStatus = CatchAsyncError(async (payload) => {
