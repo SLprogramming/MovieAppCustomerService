@@ -1,6 +1,6 @@
 // socket.js
 import { Server } from "socket.io";
-import { createMessage, takeConversation } from "../socketFunctions/message.js";
+import { changeMessageStatus, createMessage, takeConversation } from "../socketFunctions/message.js";
 
 let io;
 
@@ -25,9 +25,7 @@ export const initSocket = (server) => {
 
     socket.on('message:new',createMessage);
     socket.on('conversation:take',takeConversation);
-    // socket.on("changeMessageStatus",() => {
-
-    // })
+    socket.on('message:statusChange',changeMessageStatus)
     
 
     socket.on("disconnect", () => {

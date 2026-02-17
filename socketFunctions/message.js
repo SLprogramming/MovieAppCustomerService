@@ -126,6 +126,14 @@ export const takeConversation = CatchAsyncError(
   },
 );
 
-export const changeMessageStatus = CatchAsyncError(async (payload) => {
-  console.log("Changing message status with payload:", payload);
+export const changeMessageStatus = CatchAsyncError(async ({id,status,sender_id}) => {
+    const io = getIO();
+    const message = await Message.findByIdAndUpdate(id,{status},{new:true}).populate({
+      path: "sender_id",
+      select: "name avatar role",
+    })
+    if(message){
+      io.to(`user_${sender_id}`).emit("message:statusChanged", message);
+    }
+  // console.log("Changing message status with payload:", payload);
 });
