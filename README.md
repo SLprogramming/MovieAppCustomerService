@@ -117,7 +117,7 @@ Create a `.env` file in the root directory with the following variables:
 ```
 env
 PORT=8080
-LOCAL_IP_ADDRESS=192.168.110.112
+LOCAL_IP_ADDRESS=192.168.120.20
 NODE_ENV=development
 DB_URL="mongodb+srv://<username>:<password>@cluster0.<cluster>.mongodb.net/MovieApp?retryWrites=true&w=majority&appName=Cluster0"
 CLOUDINARY_API_KEY=your_api_key
@@ -145,7 +145,7 @@ bash
 npm start
 ```
 
-The server will start on `http://<LOCAL_IP_ADDRESS>:<PORT>` (default: `http://192.168.110.112:8080`)
+The server will start on `http://<LOCAL_IP_ADDRESS>:<PORT>` (default: `http://192.168.120.20:8080`)
 
 ## API Endpoints
 
@@ -297,8 +297,8 @@ The server is configured to accept requests from specific origins:
 javascript
 const allowedOrigins = [
   "https://movie-app-website-mu.vercel.app",
-  "http://192.168.110.112:5173",
-  "http://192.168.110.112:5174"
+  "http://192.168.120.20:5173",
+  "http://192.168.120.20:5174"
 ];
 ```
 
